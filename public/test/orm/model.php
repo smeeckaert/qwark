@@ -20,11 +20,9 @@ try {
 } catch (Exception $e) {
     d($e->getMessage());
 }*/
-
 $item = Post::find(2);
-$item->title = "change2";
-$item->save();
-
+$item->title = "change3";
+$item->save('replica');
 $item = Post::find(3);
 //$item->delete();
 

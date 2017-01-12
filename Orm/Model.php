@@ -9,23 +9,30 @@ use Qwark\Orm\Model\GenericBuilder;
 abstract class Model
 {
     static protected $_id = 'id';
+    /** @var  string */
     static protected $_table;
+    /** @var  string */
     static protected $_prefix;
-    static protected $_unique;
     protected static $_relations = array();
     protected $_prefixLen;
     protected $_relationships = array();
+    /** @var  GenericBuilder The query builder for this model */
     protected static $_builder;
+    /** @var string Name of the DB instance the model is fetched from */
+    protected $_dbName;
 
-
-    public function __construct($data = null)
+    public function __construct($data = null, $dbName = null)
     {
         if (!empty($data)) {
             $this->import($data);
         }
+        $this->_dbName = $dbName;
         static::init();
     }
 
+    /**
+     * Set the default table and prefix values
+     */
     protected static function init()
     {
         if (empty(static::$_table)) {
@@ -46,21 +53,22 @@ abstract class Model
     }
 
     /**
-     * @param int|array|QueryInterface $properties
-     * @param bool $forceArray
+     * Find items from its id, or properties or a query
+     *
+     * @param $properties
+     * @param null $dbName
      * @return static[]|static
      */
-    public static function find($properties, $forceArray = false)
+    public static function find($properties, $dbName = null)
     {
         static::init();
-        if (empty($builder)) {
-            $builder = DB::instance()->builder();
-        }
         $idField = static::propToDb(static::_id());
+
         if ($properties instanceof QueryInterface) {
             $builder = $properties->getBuilder();
             $query = $properties;
         } else {
+            $builder = DB::instance($dbName)->builder();
             $query = $builder->select()->setTable(static::$_table);
             if (!is_array($properties)) {
                 $query->where()->equals($idField, $properties);
@@ -72,13 +80,16 @@ abstract class Model
         }
 
         $sql = $builder->writeFormatted($query);
-        $result = DB::prepare($sql, $builder->getValues());
+
+        $result = DB::prepare($sql, $builder->getValues(), $dbName);
+
         $results = array();
         // @todo change that to an iterable collection
         while (($row = $result->fetch(\PDO::FETCH_ASSOC))) {
-            $results[$row[$idField]] = new static($row);
+            $results[$row[$idField]] = new static($row, DB::instance($dbName)->name());
         }
-        if (!$forceArray && $result->rowCount() == 1) {
+        // @todo probably remove that
+        if ($result->rowCount() == 1) {
             return current($results);
         }
         return $results;
@@ -96,6 +107,11 @@ abstract class Model
         return static::$_builder;
     }
 
+    /**
+     * @todo refacto
+     * @param $name
+     * @return mixed|null
+     */
     public function __get($name)
     {
         if (array_key_exists($name, static::$_relations)) {
@@ -108,7 +124,7 @@ abstract class Model
                 if (!empty($rel['conditions'])) {
                     $params = Tools::deepMerge($params, $rel['conditions']);
                 }
-                $this->_relationships[$name] = $model::find($params, true);
+                $this->_relationships[$name] = $model::find($params);
             }
             return $this->_relationships[$name];
         }
@@ -122,6 +138,7 @@ abstract class Model
     }
 
     /**
+     * @todo refacto
      * @param $relation
      *
      * @return Model
@@ -142,6 +159,11 @@ abstract class Model
         return null;
     }
 
+    /**
+     * Remove the prefix from a field
+     * @param $field
+     * @return string
+     */
     protected function dbToProp($field)
     {
         if (empty($this->_prefixLen)) {
@@ -150,6 +172,11 @@ abstract class Model
         return substr($field, $this->_prefixLen);
     }
 
+    /**
+     * Add the prefix to a field name
+     * @param $field
+     * @return string
+     */
     public static function propToDb($field)
     {
         return static::$_prefix . '_' . $field;
@@ -169,10 +196,16 @@ abstract class Model
         }
     }
 
+    /**
+     * Called before saving an element
+     */
     protected function before_save()
     {
     }
 
+    /**
+     * Called after saving an element
+     */
     protected function after_save()
     {
     }
@@ -180,14 +213,14 @@ abstract class Model
     /**
      * Save into the schema
      */
-    public function save()
+    public function save($dbName = null)
     {
         $this->before_save();
         $idField = static::_id();
         if (empty($this->$idField)) {
-            $this->$idField = $this->insert();
+            $this->$idField = $this->insert($dbName);
         } else {
-            $this->update();
+            $this->update($dbName);
         }
         $this->after_save();
     }
@@ -202,34 +235,63 @@ abstract class Model
         return $this->$idField;
     }
 
-    public function update()
+    /**
+     * @param null $dbName
+     * @return string
+     */
+    protected function insert($dbName = null)
     {
+        $data = static::keysToDb($this->getFields());
+        $builder = static::builder();
+        $query = $builder->insert()->setValues($data);
+        DB::prepare($builder->write($query), $builder->getValues(), $dbName);
+        $this->_dbName = DB::instance($dbName)->name();
+        return DB::lastId();
+    }
+
+    /**
+     * @param null $dbName
+     * @return string
+     */
+    protected function update($dbName = null)
+    {
+        $dbName = DB::instance($dbName)->name();
+        $id = $this->getIdValue();
+        /**
+         * If we try to save the item in an other db that the one it was fetched from,
+         * we need to check if the item exists already, if it does not, we insert it instead
+         */
+        if ($this->_dbName != $dbName) {
+            $item = static::find($id, $dbName);
+            if (empty($item)) {
+                return $this->insert($dbName);
+            }
+        }
         $fields = $this->getFields();
         unset($fields[static::_id()]);
         $data = static::keysToDb($fields);
         $builder = static::builder();
         $query = $builder->update()->setValues($data);
-        $query->where()->equals(static::_id(), $this->getIdValue());
-        DB::prepare($builder->write($query), $builder->getValues());
+        $query->where()->equals(static::_id(), $id);
+        DB::prepare($builder->write($query), $builder->getValues(), $dbName);
+        $this->_dbName = DB::instance($dbName)->name();
     }
 
-    public function delete()
+    /**
+     * @param null $dbName
+     */
+    public function delete($dbName = null)
     {
         $builder = static::builder();
         $query = $builder->delete()->where()->equals(static::_id(), $this->getIdValue())->end();
         $query = $builder->write($query);
-        DB::prepare($builder->write($query), $builder->getValues());
+        DB::prepare($builder->write($query), $builder->getValues(), $dbName);
     }
 
-    protected function insert()
-    {
-        $data = static::keysToDb($this->getFields());
-        $builder = static::builder();
-        $query = $builder->insert()->setValues($data);
-        DB::prepare($builder->write($query), $builder->getValues());
-        return DB::lastId();
-    }
-
+    /**
+     * Return all the properties of the object that is a database field (ie. doesn't start with _)
+     * @return array
+     */
     protected function getFields()
     {
         $properties = get_object_vars($this);
@@ -244,8 +306,8 @@ abstract class Model
     }
 
     /**
-     * @param       $array
-     *
+     * Add the prefix on each keys of an array
+     * @param $array
      * @return array
      */
     protected static function keysToDb($array)

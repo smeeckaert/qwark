@@ -45,7 +45,7 @@ class DB
     public static function init($name, $dsn, $user = null, $password = null, $options = null)
     {
         if (empty(static::$instances[$name])) {
-            static::$instances[$name] = new Database\Link($dsn, $user, $password, $options);
+            static::$instances[$name] = new Database\Link($dsn, $user, $password, $options, $name);
             if (empty(static::$currentInstance)) {
                 static::$currentInstance = static::$instances[$name];
             }

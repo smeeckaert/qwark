@@ -13,9 +13,11 @@ class Link
     protected $dbInfos;
     /** @var  GenericBuilder */
     protected $builder;
+    protected $name;
 
-    public function __construct($dsn, $user, $password, $options)
+    public function __construct($dsn, $user, $password, $options, $name)
     {
+        $this->name = $name;
         $this->dbInfos = array('dsn' => $dsn, 'user' => $user, 'password' => $password, 'options' => $options);
     }
 
@@ -24,6 +26,11 @@ class Link
         if (empty($this->dbh)) {
             $this->dbh = new \PDO($this->dbInfos['dsn'], $this->dbInfos['user'], $this->dbInfos['password'], $this->dbInfos['options']);
         }
+    }
+
+    public function name()
+    {
+        return $this->name;
     }
 
     /**
