@@ -9,6 +9,9 @@ use Qwark\Orm\Model\GenericBuilder;
 abstract class Model
 {
     static protected $_id = 'id';
+    /**
+     * @todo change to an array with class name
+     */
     /** @var  string */
     static protected $_table;
     /** @var  string */
@@ -37,6 +40,7 @@ abstract class Model
     {
         if (empty(static::$_table)) {
             static::$_table = Tools::serializeString(get_called_class());
+            var_dump(static::$_table);
         }
         if (empty(static::$_prefix)) {
             static::$_prefix = Tools::adaptPrefix(static::$_table);
