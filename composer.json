@@ -1,0 +1,20 @@
+{
+  "name": "smeeckaert/fw",
+  "description": "Framework",
+  "license": "Unlicense",
+  "authors": [
+    {
+      "name": "Martin Smeeckaert",
+      "email": "martin@smeeckaert.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Qwark\\": "",
+      "NilPortugues\\Sql\\QueryBuilder\\Syntax\\": "Orm/Syntax"
+    }
+  },
+  "require": {
+    "nilportugues/sql-query-builder": "^1.5"
+  }
+}
