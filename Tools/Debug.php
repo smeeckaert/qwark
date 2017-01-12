@@ -11,7 +11,9 @@ namespace Qwark\Tools {
 
         public static function d($data)
         {
-            echo var_dump($data);
+            if (!empty($data)) {
+                echo var_dump($data);
+            }
         }
 
         public static function init()
