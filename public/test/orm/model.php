@@ -25,7 +25,9 @@ $item = Post::find(2);
 $item->title = "change2";
 $item->save();
 
-var_dump($item);
+$item = Post::find(3);
+//$item->delete();
+
 $builder = \Qwark\Orm\DB::instance()->builder();
 $query = $builder->select()->setTable('post');
 $query->where()->equals('post_title', 'change');
@@ -33,7 +35,7 @@ $query->where()->equals('post_title', 'change');
 $listPosts = Post::find($query);
 var_dump($listPosts);
 
-echo "use builder";
+d("use builder");
 $newBuilder = Post::builder();
 $query = $newBuilder->select();
 $query->where()->equals('title', 'change2');

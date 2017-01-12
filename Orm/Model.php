@@ -207,27 +207,26 @@ abstract class Model
         $fields = $this->getFields();
         unset($fields[static::_id()]);
         $data = static::keysToDb($fields);
-        $builder = DB::instance()->builder();
-        $query = $builder->update()->setTable(static::$_table)->setValues($data);
-        $query->where()->equals(static::propToDb(static::_id()), $this->getIdValue());
-        $query = $builder->write($query);
-        $values = $builder->getValues();
-        DB::prepare($query, $values);
+        $builder = static::builder();
+        $query = $builder->update()->setValues($data);
+        $query->where()->equals(static::_id(), $this->getIdValue());
+        DB::prepare($builder->write($query), $builder->getValues());
     }
 
     public function delete()
     {
-        return DB::query(static::buildQuery('delete', array('limit' => '1', 'and_where' => $this->getFields())));
+        $builder = static::builder();
+        $query = $builder->delete()->where()->equals(static::_id(), $this->getIdValue())->end();
+        $query = $builder->write($query);
+        DB::prepare($builder->write($query), $builder->getValues());
     }
 
     protected function insert()
     {
         $data = static::keysToDb($this->getFields());
-        $builder = DB::instance()->builder();
-        $query = $builder->insert()->setTable(static::$_table)->setValues($data);
-        $query = $builder->write($query);
-        $values = $builder->getValues();
-        DB::prepare($query, $values);
+        $builder = static::builder();
+        $query = $builder->insert()->setValues($data);
+        DB::prepare($builder->write($query), $builder->getValues());
         return DB::lastId();
     }
 
