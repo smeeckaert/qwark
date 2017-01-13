@@ -31,14 +31,20 @@ $query = $builder->select()->setTable('post');
 $query->where()->equals('post_title', 'change');
 
 $listPosts = Post::find($query);
-var_dump($listPosts);
+d("##### LIST");
+foreach ($listPosts as $item) {
+    d($item->title);
+}
 
 d("use builder");
 $newBuilder = Post::builder();
 $query = $newBuilder->select();
 $query->where()->equals('title', 'change2');
 $listPosts = Post::find($query);
-var_dump($listPosts);
+d("##### LIST");
+foreach ($listPosts as $item) {
+    d($item->title);
+}
 d("inline");
 $listPosts = Post::find(Post::builder()->select()->where()->equals('title', 'change2')->end());
 d($listPosts);

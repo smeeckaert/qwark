@@ -4,6 +4,7 @@ namespace Qwark\Orm;
 
 
 use NilPortugues\Sql\QueryBuilder\Manipulation\QueryInterface;
+use Qwark\Orm\Model\Collection;
 use Qwark\Orm\Model\GenericBuilder;
 
 abstract class Model
@@ -152,20 +153,14 @@ abstract class Model
 
         $sql = $builder->writeFormatted($query);
         $result = DB::prepare($sql, $builder->getValues(), $dbName);
-        $results = array();
-        // @todo change that to an iterable collection
-        while (($row = $result->fetch(\PDO::FETCH_ASSOC))) {
-            d($row);
-            $results[$row[$idField]] = new static($row, DB::instance($dbName)->name());
-        }
-        return $results;
+        return new Collection($result, get_called_class(), DB::instance($dbName)->name());
     }
 
     /**
      * Find one item id, or properties or a query and returns its as an Model instance
      * @param $properties
      * @param null $dbName
-     * @return Model
+     * @return static
      */
     public static function findOne($properties, $dbName = null)
     {
@@ -173,7 +168,7 @@ abstract class Model
         if (empty($items)) {
             return null;
         }
-        return current($items);
+        return $items->current();
     }
 
     /**
