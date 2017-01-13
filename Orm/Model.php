@@ -158,11 +158,22 @@ abstract class Model
             d($row);
             $results[$row[$idField]] = new static($row, DB::instance($dbName)->name());
         }
-        // @todo probably remove that
-        if ($result->rowCount() == 1) {
-            return current($results);
-        }
         return $results;
+    }
+
+    /**
+     * Find one item id, or properties or a query and returns its as an Model instance
+     * @param $properties
+     * @param null $dbName
+     * @return Model
+     */
+    public static function findOne($properties, $dbName = null)
+    {
+        $items = static::find($properties, $dbName);
+        if (empty($items)) {
+            return null;
+        }
+        return current($items);
     }
 
     /**
