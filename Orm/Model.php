@@ -6,6 +6,9 @@ namespace Qwark\Orm;
 use NilPortugues\Sql\QueryBuilder\Manipulation\QueryInterface;
 use Qwark\Orm\Model\Collection;
 use Qwark\Orm\Model\GenericBuilder;
+use Qwark\Orm\Model\Relationship\Factory;
+use Qwark\Orm\Model\Relationship\IFace;
+use Qwark\Tools\Arr;
 
 abstract class Model
 {
@@ -22,26 +25,101 @@ abstract class Model
     static protected $_prefixList;
     /** @var  string[] */
     static protected $_prefixLen;
-    /** @todo refacto */
-    protected static $_relations = array();
-    protected $_relationships = array();
+
     /** @var  GenericBuilder[] The query builder for this model */
     protected static $_builder;
     /** @var string Name of the DB instance the model is fetched from */
     protected $_dbName;
+    protected $_data;
+
+    /** @var IFace[] */
+    protected static $_relationships = [];
+    protected $_loadedRelationships = [];
 
     /**
      * Model constructor.
      * @param null $data An associative array of [database_column_name_with_prefix => value]
      * @param null $dbName The name of the database it was fetch from
      */
-    public function __construct($data = null, $dbName = null)
+    public function __construct($data = null, $dbName = null, $loadRelationships = true)
     {
         static::init();
         if (!empty($data)) {
             $this->import($data);
         }
         $this->_dbName = $dbName;
+        $this->cleanRelationships();
+
+        /**
+         * If the object has an id and was not created by a collection and was not wrapped in a decorator
+         * we load all the relationship for consistency
+         */
+        if (!empty($this->getIdValue()) && $loadRelationships) {
+            $this->loadAllRelationships();
+        }
+    }
+
+    /**
+     * Clean all relationships properties and build the static relationship object if needed
+     */
+    protected function cleanRelationships()
+    {
+        $fields = $this->getFields();
+        foreach ($fields as $name => $value) {
+            if (is_array($value)) {
+                if (!isset(static::$_relationships[get_called_class()][$name])) {
+                    static::$_relationships[get_called_class()][$name] = Factory::build($value, $this);
+                }
+                $this->$name = null;
+            }
+        }
+    }
+
+    /**
+     * Check if the named relationship was loaded
+     * @param $name
+     * @return bool
+     */
+    protected function isRelationshipLoaded($name)
+    {
+        return !empty($this->_loadedRelationships[$name]);
+    }
+
+    /**
+     * Load all relationships
+     */
+    protected function loadAllRelationships()
+    {
+        foreach (static::$_relationships[get_called_class()] as $name) {
+            if (!$this->isRelationshipLoaded($name)) {
+                $this->rel($name);
+            }
+        }
+    }
+
+    /**
+     * Load a relationship by name, if it's already loaded, returns the already loaded content
+     *
+     * @param $name
+     * @param null $dbName
+     * @return Model
+     */
+    public function rel($name, $dbName = null)
+    {
+        if (!$this->isRelationshipLoaded($name)) {
+            $this->$name = static::$_relationships[get_called_class()][$name]->load(!empty($dbName) ? $dbName : $this->_dbName);
+        }
+        return $this->$name;
+    }
+
+    /**
+     * Return whether or not a relationship is defined
+     * @param $name
+     * @return bool
+     */
+    public function hasRelationship($name)
+    {
+        return isset(static::$_relationships[get_called_class()][$name]);
     }
 
     /**
@@ -119,8 +197,9 @@ abstract class Model
      * Return the unprefixed name of the primary key
      * @return string
      */
-    protected static function _id()
+    public static function idKey()
     {
+        static::init();
         return static::$_id;
     }
 
@@ -134,7 +213,7 @@ abstract class Model
     public static function find($properties, $dbName = null)
     {
         static::init();
-        $idField = static::propToDb(static::_id());
+        $idField = static::propToDb(static::idKey());
 
         if ($properties instanceof QueryInterface) {
             $builder = $properties->getBuilder();
@@ -184,59 +263,6 @@ abstract class Model
     }
 
     /**
-     * @todo refacto
-     * @param $name
-     * @return mixed|null
-     */
-    public function __get($name)
-    {
-        if (array_key_exists($name, static::$_relations)) {
-            if (!isset($this->_relationships[$name])) {
-                $rel = static::$_relations[$name];
-                $fromProp = $rel['from'];
-                /** @var Model $model */
-                $model = $rel['model'];
-                $params = array('and_where' => array($rel['to'] => $this->$fromProp));
-                if (!empty($rel['conditions'])) {
-                    $params = Tools::deepMerge($params, $rel['conditions']);
-                }
-                $this->_relationships[$name] = $model::find($params);
-            }
-            return $this->_relationships[$name];
-        }
-        $trace = debug_backtrace();
-        trigger_error(
-            'Undefined property via __get(): ' . $name .
-            ' in ' . $trace[0]['file'] .
-            ' on line ' . $trace[0]['line'],
-            E_USER_NOTICE);
-        return null;
-    }
-
-    /**
-     * @todo refacto
-     * @param $relation
-     *
-     * @return Model
-     */
-    public function rel($relation)
-    {
-        if (array_key_exists($relation, static::$_relations)) {
-            $rel = static::$_relations[$relation];
-            $fromProp = $rel['from'];
-            $toProp = $rel['to'];
-
-            /** @var Model $model */
-            $model = $rel['model'];
-            $item = new $model();
-            $item->$toProp = $this->$fromProp;
-            return $item;
-        }
-        return null;
-    }
-
-
-    /**
      * Remove the prefix from a field
      * @param $field
      * @return string
@@ -269,6 +295,7 @@ abstract class Model
             $prop = $this->dbToProp($key);
             $this->$prop = $value;
         }
+        $this->_data = $data;
     }
 
     /**
@@ -289,13 +316,23 @@ abstract class Model
     {
     }
 
+    public function __get($name)
+    {
+        return Arr::get($this->_data, static::propToDb($name));
+    }
+
+    public function __set($name, $value)
+    {
+        $this->_data[$name] = $value;
+    }
+
     /**
      * Save into the schema
      */
     public function save($dbName = null)
     {
         $this->before_save();
-        $idField = static::_id();
+        $idField = static::idKey();
         if (empty($this->$idField)) {
             $this->$idField = $this->insert($dbName);
         } else {
@@ -309,7 +346,7 @@ abstract class Model
      */
     protected function getIdValue()
     {
-        $idField = static::_id();
+        $idField = static::idKey();
         return $this->$idField;
     }
 
@@ -346,11 +383,11 @@ abstract class Model
             }
         }
         $fields = $this->getFields();
-        unset($fields[static::_id()]);
+        unset($fields[static::idKey()]);
         $data = static::keysToDb($fields);
         $builder = static::builder();
         $query = $builder->update()->setValues($data);
-        $query->where()->equals(static::_id(), $id);
+        $query->where()->equals(static::idKey(), $id);
         DB::prepare($builder->write($query), $builder->getValues(), $dbName);
         $this->_dbName = DB::instance($dbName)->name();
     }
@@ -361,7 +398,7 @@ abstract class Model
     public function delete($dbName = null)
     {
         $builder = static::builder();
-        $query = $builder->delete()->where()->equals(static::_id(), $this->getIdValue())->end();
+        $query = $builder->delete()->where()->equals(static::idKey(), $this->getIdValue())->end();
         $query = $builder->write($query);
         DB::prepare($builder->write($query), $builder->getValues(), $dbName);
     }

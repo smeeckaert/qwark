@@ -37,7 +37,8 @@ class Collection implements \Iterator
     function current()
     {
         if (!empty($this->data[$this->position])) {
-            return new $this->class($this->data[$this->position], $this->dbName);
+            // Create a decorator and do not load the relationships
+            return new Decorator(new $this->class($this->data[$this->position], $this->dbName, false));
         }
         return null;
     }

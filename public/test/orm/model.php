@@ -23,6 +23,7 @@ try {
 $item = Post::findOne(2);
 $item->title = "change3";
 $item->save('replica');
+d($item);
 $item = Post::findOne(3);
 //$item->delete();
 
