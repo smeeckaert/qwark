@@ -20,10 +20,10 @@ try {
 } catch (Exception $e) {
     d($e->getMessage());
 }*/
-$item = Post::find(2);
+$item = Post::findOne(2);
 $item->title = "change3";
 $item->save('replica');
-$item = Post::find(3);
+$item = Post::findOne(3);
 //$item->delete();
 
 $builder = \Qwark\Orm\DB::instance()->builder();

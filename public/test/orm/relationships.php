@@ -16,9 +16,9 @@ class Category extends \Qwark\Orm\Model
     public $order;
 }
 
-$post = Post::find(1);
+$post = Post::findOne(1);
 $post->title = "Rel title";
-$cate = Category::find(1);
+$cate = Category::findOne(1);
 
 $cate->order = 3;
 d("cate");
