@@ -29,6 +29,11 @@ abstract class Model
     /** @var string Name of the DB instance the model is fetched from */
     protected $_dbName;
 
+    /**
+     * Model constructor.
+     * @param null $data An associative array of [database_column_name_with_prefix => value]
+     * @param null $dbName The name of the database it was fetch from
+     */
     public function __construct($data = null, $dbName = null)
     {
         static::init();
@@ -53,16 +58,25 @@ abstract class Model
         }
     }
 
+    /**
+     * @param $table
+     */
     protected static function setTable($table)
     {
         static::$_tableList[get_called_class()] = $table;
     }
 
+    /**
+     * @param $prefix
+     */
     protected static function setPrefix($prefix)
     {
         static::$_prefixList[get_called_class()] = $prefix;
     }
 
+    /**
+     * @param $len
+     */
     protected static function setPrefixLen($len)
     {
         static::$_prefixLen[get_called_class()] = $len;
@@ -88,6 +102,10 @@ abstract class Model
         return static::$_prefixList[get_called_class()];
     }
 
+    /**
+     * Return the length of the table prefix, including the _ sign
+     * @return string
+     */
     public static function prefixLen()
     {
         if (empty(static::$_prefixLen[get_called_class()])) {
@@ -246,6 +264,10 @@ abstract class Model
             $this->$prop = $value;
         }
     }
+
+    /**
+     * @todo change this behaviour somehow
+     */
 
     /**
      * Called before saving an element
