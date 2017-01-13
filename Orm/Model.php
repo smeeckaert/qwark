@@ -9,28 +9,33 @@ use Qwark\Orm\Model\GenericBuilder;
 abstract class Model
 {
     static protected $_id = 'id';
-    /**
-     * @todo change to an array with class name
-     */
-    /** @var  string */
     static protected $_table;
-    /** @var  string */
     static protected $_prefix;
+
+    /**
+     * These two variables are share by every model, so they can't be overriden
+     */
+    /** @var  string[] */
+    static protected $_tableList;
+    /** @var  string[] */
+    static protected $_prefixList;
+    /** @var  string[] */
+    static protected $_prefixLen;
+    /** @todo refacto */
     protected static $_relations = array();
-    protected $_prefixLen;
     protected $_relationships = array();
-    /** @var  GenericBuilder The query builder for this model */
+    /** @var  GenericBuilder[] The query builder for this model */
     protected static $_builder;
     /** @var string Name of the DB instance the model is fetched from */
     protected $_dbName;
 
     public function __construct($data = null, $dbName = null)
     {
+        static::init();
         if (!empty($data)) {
             $this->import($data);
         }
         $this->_dbName = $dbName;
-        static::init();
     }
 
     /**
@@ -38,13 +43,57 @@ abstract class Model
      */
     protected static function init()
     {
-        if (empty(static::$_table)) {
-            static::$_table = Tools::serializeString(get_called_class());
-            var_dump(static::$_table);
+        if (empty(static::$_tableList[get_called_class()])) {
+            $tableName = !empty(static::$_table) ? static::$_table : Tools::serializeString(get_called_class());
+            static::setTable($tableName);
         }
-        if (empty(static::$_prefix)) {
-            static::$_prefix = Tools::adaptPrefix(static::$_table);
+        if (empty(static::$_prefixList[get_called_class()])) {
+            $prefix = !empty(static::$_prefix) ? static::$_prefix : Tools::adaptPrefix(static::$_tableList[get_called_class()]);
+            static::setPrefix($prefix);
         }
+    }
+
+    protected static function setTable($table)
+    {
+        static::$_tableList[get_called_class()] = $table;
+    }
+
+    protected static function setPrefix($prefix)
+    {
+        static::$_prefixList[get_called_class()] = $prefix;
+    }
+
+    protected static function setPrefixLen($len)
+    {
+        static::$_prefixLen[get_called_class()] = $len;
+    }
+
+    /**
+     * Return the model's table
+     * @return string
+     */
+    public static function table()
+    {
+        static::init();
+        return static::$_tableList[get_called_class()];
+    }
+
+    /**
+     * Return the model's prefix
+     * @return string
+     */
+    public static function prefix()
+    {
+        static::init();
+        return static::$_prefixList[get_called_class()];
+    }
+
+    public static function prefixLen()
+    {
+        if (empty(static::$_prefixLen[get_called_class()])) {
+            static::setPrefixLen(strlen(static::prefix()) + 1);
+        }
+        return static::$_prefixLen[get_called_class()];
     }
 
     /**
@@ -73,7 +122,7 @@ abstract class Model
             $query = $properties;
         } else {
             $builder = DB::instance($dbName)->builder();
-            $query = $builder->select()->setTable(static::$_table);
+            $query = $builder->select()->setTable(static::table());
             if (!is_array($properties)) {
                 $query->where()->equals($idField, $properties);
             } else {
@@ -84,12 +133,11 @@ abstract class Model
         }
 
         $sql = $builder->writeFormatted($query);
-
         $result = DB::prepare($sql, $builder->getValues(), $dbName);
-
         $results = array();
         // @todo change that to an iterable collection
         while (($row = $result->fetch(\PDO::FETCH_ASSOC))) {
+            d($row);
             $results[$row[$idField]] = new static($row, DB::instance($dbName)->name());
         }
         // @todo probably remove that
@@ -105,10 +153,10 @@ abstract class Model
     public static function builder()
     {
         static::init();
-        if (empty(static::$_builder)) {
-            static::$_builder = new GenericBuilder(static::$_prefix, get_called_class(), static::$_table);
+        if (empty(static::$_builder[get_called_class()])) {
+            static::$_builder[get_called_class()] = new GenericBuilder(static::prefix(), get_called_class(), static::table());
         }
-        return static::$_builder;
+        return static::$_builder[get_called_class()];
     }
 
     /**
@@ -163,6 +211,7 @@ abstract class Model
         return null;
     }
 
+
     /**
      * Remove the prefix from a field
      * @param $field
@@ -170,10 +219,7 @@ abstract class Model
      */
     protected function dbToProp($field)
     {
-        if (empty($this->_prefixLen)) {
-            $this->_prefixLen = strlen(static::$_prefix) + 1;
-        }
-        return substr($field, $this->_prefixLen);
+        return substr($field, static::prefixLen());
     }
 
     /**
@@ -183,7 +229,8 @@ abstract class Model
      */
     public static function propToDb($field)
     {
-        return static::$_prefix . '_' . $field;
+        static::init();
+        return static::prefix() . '_' . $field;
     }
 
 
@@ -230,7 +277,6 @@ abstract class Model
     }
 
     /**
-     * @todo remove or rename
      * @return mixed|null
      */
     protected function getIdValue()

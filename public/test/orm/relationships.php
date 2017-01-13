@@ -18,7 +18,6 @@ class Category extends \Qwark\Orm\Model
 
 $post = Post::find(1);
 $post->title = "Rel title";
-
 $cate = Category::find(1);
 
 $cate->order = 3;
@@ -26,3 +25,4 @@ d("cate");
 $cate->save();
 d("after cate");
 $post->save();
+d("after save");

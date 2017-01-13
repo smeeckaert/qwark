@@ -8,7 +8,7 @@ namespace Qwark\Tools {
          * Debug a variable and exit
          * @param $data
          */
-        public static function dd($data)
+        public static function dd($data = null)
         {
             die(static::d($data));
         }
@@ -17,11 +17,9 @@ namespace Qwark\Tools {
          * Debug a variable
          * @param $data
          */
-        public static function d($data)
+        public static function d($data = null)
         {
-            if (!empty($data)) {
-                echo var_dump($data);
-            }
+            echo var_dump($data);
         }
 
         /**
