@@ -71,7 +71,7 @@ class Link
         $query->execute();
         $this->dbh->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         if (!$query) {
-            throw new \Exception(Tools::implode($this->dbh->errorInfo(), ' :: '));
+            throw new \Exception(implode(' :: ', $this->dbh->errorInfo()));
         }
         return $query;
     }
@@ -81,7 +81,7 @@ class Link
         $this->initDbh();
         $query = $this->dbh->query($sql);
         if (!$query) {
-            throw new \Exception(Tools::implode($this->dbh->errorInfo(), ' :: '));
+            throw new \Exception(implode(' :: ', $this->dbh->errorInfo()));
         }
         return $query;
     }
