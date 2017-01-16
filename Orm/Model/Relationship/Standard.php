@@ -93,6 +93,11 @@ abstract class Standard implements IFace
      */
     protected function applyQuery($query)
     {
+        if (!empty($this->params['query'])) {
+            if (is_callable($this->params['query'])) {
+                return $this->params['query']($query, $this->model);
+            }
+        }
         return $this->defaultQuery($query);
     }
 

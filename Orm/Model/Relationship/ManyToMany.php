@@ -2,6 +2,7 @@
 
 namespace Qwark\Orm\Model\Relationship;
 
+use NilPortugues\Sql\QueryBuilder\Manipulation\Select;
 use Qwark\Orm\Model;
 use Qwark\Orm\Tools;
 
@@ -52,10 +53,18 @@ class ManyToMany extends Standard
         $builder->addPrefix($this->assoc, $this->assocPrefix);
         $builder->addPrefix($this->from, $fromPrefix);
         $query = $builder->select();
-        $query->leftJoin($this->assoc, $this->toKey, $this->assocTo, ['*']);
-        $query->leftJoin($this->from, "{$this->assoc}." . $this->assocFrom, $this->fromKey, ['*']);
-        $query->where()->equals("{$this->from}." . $this->fromKey, $this->model->{$this->fromKey});
+        $query->leftJoin($this->assoc, $this->toKey, $this->assocTo, []);
+        $query->leftJoin($this->from, "{$this->assoc}." . $this->assocFrom, $this->fromKey, []);
+        $this->applyQuery($query);
         $model = $this->toModel;
         return $model::find($query, $dbName);
+    }
+
+    /**
+     * @param Select $query
+     */
+    protected function defaultQuery($query)
+    {
+        $query->where()->equals("{$this->from}." . $this->fromKey, $this->model->{$this->fromKey});
     }
 }

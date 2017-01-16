@@ -17,6 +17,22 @@ class Post extends \Qwark\Orm\Model
         'to'    => Image::class,
         'assoc' => true,
     ];
+
+    /** @var Image */
+    public $customimages;
+
+    public function customRelations()
+    {
+        $this->customimages = [
+            'to'    => Image::class,
+            'assoc' => true,
+            'query' => function (\NilPortugues\Sql\QueryBuilder\Manipulation\Select $query, $item) {
+                /** @var static $item */
+                $query->where()->equals("post.post_id", $item->id)
+                    ->equals('url', 'url1');
+            },
+        ];
+    }
 }
 
 class Category extends \Qwark\Orm\Model
@@ -44,6 +60,8 @@ $catePost = $post->category;
 d($catePost);
 
 d($post->images);
+d("CUSTOM");
+d($post->customimages);
 
 $post->title = "Rel title";
 $cate = Category::findOne(1);

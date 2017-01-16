@@ -48,6 +48,7 @@ abstract class Model
             $this->import($data);
         }
         $this->_dbName = $dbName;
+        $this->customRelations();
         $this->cleanRelationships();
 
         /**
@@ -57,6 +58,11 @@ abstract class Model
         if (!empty($this->getIdValue()) && $loadRelationships) {
             $this->loadAllRelationships();
         }
+    }
+
+    protected function customRelations()
+    {
+
     }
 
     /**
