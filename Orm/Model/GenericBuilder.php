@@ -58,7 +58,7 @@ class GenericBuilder extends \NilPortugues\Sql\QueryBuilder\Builder\GenericBuild
     /**
      * @param null $table
      * @param array|null $values
-     * @return \NilPortugues\Sql\QueryBuilder\Manipulation\AbstractBaseQuery
+     * @return \NilPortugues\Sql\QueryBuilder\Manipulation\Update
      */
     public function update($table = null, array $values = null)
     {

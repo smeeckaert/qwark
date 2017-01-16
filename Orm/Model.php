@@ -9,6 +9,7 @@ use Qwark\Orm\Model\GenericBuilder;
 use Qwark\Orm\Model\Relationship\Factory;
 use Qwark\Orm\Model\Relationship\IFace;
 use Qwark\Tools\Arr;
+use Qwark\Tools\Str;
 
 abstract class Model
 {
@@ -294,10 +295,13 @@ abstract class Model
      *
      * @param $data
      */
-    public function import($data)
+    protected function import($data)
     {
         foreach ($data as $key => $value) {
-            $prop = $this->dbToProp($key);
+            $prop = $key;
+            if (Str::startWith($key, static::prefix())) {
+                $prop = $this->dbToProp($key);
+            }
             $this->$prop = $value;
         }
         $this->_data = $data;
@@ -417,7 +421,7 @@ abstract class Model
         $properties = get_object_vars($this);
         $dbFields = array();
         foreach ($properties as $key => $value) {
-            if ($key[0] == '_') {
+            if ($key[0] == '_' || $this->hasRelationship($key)) {
                 continue;
             }
             $dbFields[$key] = $value;

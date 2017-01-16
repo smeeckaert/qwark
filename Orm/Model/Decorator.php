@@ -25,6 +25,7 @@ class Decorator
 
     public function __set($name, $value)
     {
+        //@todo beware of relationships maybe
         $this->instance->$name = $value;
     }
 
