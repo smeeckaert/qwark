@@ -268,7 +268,6 @@ class Where
     protected function compare($column, $value, $operator)
     {
         $column = $this->prepareColumn($column);
-
         $this->comparisons[] = [
             'subject'     => $column,
             'conjunction' => $operator,

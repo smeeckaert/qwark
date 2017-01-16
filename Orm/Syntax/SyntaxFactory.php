@@ -18,7 +18,7 @@ final class SyntaxFactory
     /**
      * Creates a collection of Column objects.
      *
-     * @param array      $arguments
+     * @param array $arguments
      * @param Table|null $table
      *
      * @return array
@@ -45,7 +45,7 @@ final class SyntaxFactory
     /**
      * Creates a Column object.
      *
-     * @param array      $argument
+     * @param array $argument
      * @param null|Table $table
      *
      * @return Column
@@ -57,12 +57,16 @@ final class SyntaxFactory
 
         $columnAlias = \array_keys($argument);
         $columnAlias = $columnAlias[0];
-
+        if (mb_strpos($columnName, '.')) {
+            $data = explode('.', $columnName);
+            $table = $data[0];
+            $columnName = $data[1];
+        }
         if (\is_numeric($columnAlias) || \strpos($columnName, '*') !== false) {
             $columnAlias = null;
         }
 
-        return new Column($columnName, (string) $table, $columnAlias);
+        return new Column($columnName, (string)$table, $columnAlias);
     }
 
     /**

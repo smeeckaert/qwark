@@ -17,7 +17,7 @@ abstract class Model
     static protected $_prefix;
 
     /**
-     * These two variables are share by every model, so they can't be overriden
+     * These following properties are share by every model, so they can't be overriden
      */
     /** @var  string[] */
     static protected $_tableList;
@@ -213,19 +213,18 @@ abstract class Model
     public static function find($properties, $dbName = null)
     {
         static::init();
-        $idField = static::propToDb(static::idKey());
 
         if ($properties instanceof QueryInterface) {
             $builder = $properties->getBuilder();
             $query = $properties;
         } else {
-            $builder = DB::instance($dbName)->builder();
-            $query = $builder->select()->setTable(static::table());
+            $builder = static::builder();
+            $query = $builder->select();
             if (!is_array($properties)) {
-                $query->where()->equals($idField, $properties);
+                $query->where()->equals(static::idKey(), $properties);
             } else {
                 foreach ($properties as $key => $value) {
-                    $query->where()->equals(static::propToDb($key), $value);
+                    $query->where()->equals($key, $value);
                 }
             }
         }

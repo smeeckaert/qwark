@@ -2,6 +2,7 @@
 
 namespace Qwark\Orm\Model\Relationship;
 
+use NilPortugues\Sql\QueryBuilder\Manipulation\Select;
 use Qwark\Orm\Model;
 
 abstract class Standard implements IFace
@@ -80,6 +81,19 @@ abstract class Standard implements IFace
                 }
             }
         }
+    }
+
+    protected function defaultQuery($query)
+    {
+
+    }
+
+    /**
+     * @param Select $query
+     */
+    protected function applyQuery($query)
+    {
+        return $this->defaultQuery($query);
     }
 
     public function load($dbName)
