@@ -115,6 +115,7 @@ abstract class Model
     {
         if (!$this->isRelationshipLoaded($name)) {
             $this->$name = static::$_relationships[get_called_class()][$name]->load(!empty($dbName) ? $dbName : $this->_dbName);
+            $this->_loadedRelationships[$name] = true;
         }
         return $this->$name;
     }
@@ -302,7 +303,10 @@ abstract class Model
             if (Str::startWith($key, static::prefix())) {
                 $prop = $this->dbToProp($key);
             }
-            $this->$prop = $value;
+            if (property_exists($this, $prop)) {
+                $this->$prop = $value;
+                unset($data[$key]);
+            }
         }
         $this->_data = $data;
     }
@@ -347,7 +351,17 @@ abstract class Model
         } else {
             $this->update($dbName);
         }
+        $this->saveRelationships($dbName);
         $this->after_save();
+    }
+
+    protected function saveRelationships($dbName)
+    {
+        if (!empty($this->_loadedRelationships)) {
+            foreach ($this->_loadedRelationships as $relation => $value) {
+                static::$_relationships[get_called_class()][$relation]->save(!empty($dbName) ? $dbName : $this->_dbName);
+            }
+        }
     }
 
     /**

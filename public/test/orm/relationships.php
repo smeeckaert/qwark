@@ -63,7 +63,9 @@ d($post->images);
 d("CUSTOM");
 d($post->customimages);
 
-$post->title = "Rel title";
+$post->title = "Rel title3";
+$post->save();
+dd("stop");
 $cate = Category::findOne(1);
 
 $cateList = $cate->posts;

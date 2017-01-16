@@ -24,7 +24,7 @@ abstract class Standard implements IFace
      * @param $params
      * @param Model $model
      */
-    public function __construct($params, $model)
+    public function __construct($params, &$model)
     {
         $invert = false;
         $this->model = $model;
@@ -106,8 +106,9 @@ abstract class Standard implements IFace
         // TODO: Implement load() method.
     }
 
-    public function save()
+    public function save($dbName)
     {
+        dd("Save");
         // TODO: Implement save() method.
     }
 

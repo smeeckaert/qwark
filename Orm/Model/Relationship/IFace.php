@@ -6,5 +6,5 @@ interface IFace
 {
     public function load($dbName);
 
-    public function save();
+    public function save($dbName);
 }
